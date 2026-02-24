@@ -4,7 +4,7 @@ from app.core.security import verify_password, hash_password, create_access_toke
 
 class AuthService:
 
-    def register_user(db: Session, user_data):
+    def register_user(self, db: Session, user_data):
         user_exists = db.query(User).filter(User.email == user_data.email).first()    
         if user_exists:
             raise ValueError("User alredy exists with this email")
@@ -25,7 +25,7 @@ class AuthService:
         return user
 
 
-    def authenticate_user(db: Session, email: str, password: str):
+    def authenticate_user(self, db: Session, email: str, password: str):
         user = db.query(User).filter(User.email == email).first()
         if not user:
             return None
@@ -36,7 +36,7 @@ class AuthService:
 
 
     def login_user(db: Session, email: str, password: str):
-        user = authenticate_user(db, email, password)
+        user = self.authenticate_user(db, email, password)
         if not user:
             return None
         access_token = create_access_token(data={"sub": str(user.id)})

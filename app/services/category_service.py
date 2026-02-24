@@ -6,13 +6,11 @@ from datetime import datetime, timezone
 
 class CategoryService:
 
-    @staticmethod
-    def get_all_categories(db: Session):
+    def get_all_categories(self, db: Session):
         return db.query(Category).filter(Category.is_deleted == False).all()
 
 
-    @staticmethod
-    def create_category(db: Session, category_create: CategoryCreate) -> Category:
+    def create_category(self, db: Session, category_create: CategoryCreate) -> Category:
         category = Category(
             name=category_create.name,
             type=category_create.type,
@@ -25,13 +23,11 @@ class CategoryService:
         return category
 
 
-    @staticmethod
-    def get_category(db: Session, category_id: int) -> Category:
+    def get_category(self, db: Session, category_id: int) -> Category:
         return db.query(Category).filter(Category.id == category_id, Category.is_deleted == False).first()
 
 
-    @staticmethod
-    def update_category(db: Session, category_id: int, category_update: CategoryUpdate) -> Category:
+    def update_category(self, db: Session, category_id: int, category_update: CategoryUpdate) -> Category:
         category = db.query(Category).filter(Category.id == category_id, Category.is_deleted == False).first()
         if not category:
             return None
@@ -44,8 +40,8 @@ class CategoryService:
         db.refresh(category)
         return category
 
-    @staticmethod
-    def delete_category(db: Session, category_id: int) -> bool:
+
+    def delete_category(self, db: Session, category_id: int) -> bool:
         category = db.query(Category).filter(Category.id == category_id, Category.is_deleted == False).first()
         if not category:
             return False
