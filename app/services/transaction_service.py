@@ -3,12 +3,25 @@ from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 from datetime import datetime, timezone
+import math
 
 
 class TransactionService:
 
-    def get_all_transactions(self, db: Session, current_user: User):
-        return db.query(Transaction).filter(Transaction.is_deleted == False, Transaction.created_by == current_user.id).all()
+    def get_all_transactions(self, db: Session, current_user: User, page: int = 1, limit: int = 10):
+        query = db.query(Transaction).filter(Transaction.is_deleted == False, Transaction.created_by == current_user.id)
+        total = query.count()
+
+        items = (query.offset((page - 1) * limit).limit(limit).all())
+        total_pages = math.ceil(total / limit) if total else 1
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages
+        }
 
 
     def create_transaction(self, db: Session, transaction_create: TransactionCreate, user: User) -> Transaction:

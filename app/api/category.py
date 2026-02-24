@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException,  status
 from sqlalchemy.orm import Session
 from typing import List
 from app.api.deps import get_db, get_current_user
+from app.utils.pagination import PaginatedResponse
 from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
 from app.services.category_service import CategoryService
 
@@ -17,10 +18,10 @@ def create_category(category: CategoryCreate, db: Session = Depends(get_db), cur
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=List[CategoryResponse])
-def get_categories(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+@router.get("/", response_model=PaginatedResponse[CategoryResponse])
+def get_categories(db: Session = Depends(get_db), current_user = Depends(get_current_user), page: int = 1, limit: int = 10):
     try:
-        categories = CategoryService().get_all_categories(db, current_user)
+        categories = CategoryService().get_all_categories(db, current_user, page, limit)
         return categories
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -3,12 +3,25 @@ from app.db.models.category import Category
 from app.db.models.user import User
 from app.schemas.category import CategoryCreate, CategoryUpdate
 from datetime import datetime, timezone
+import math
 
 
 class CategoryService:
 
-    def get_all_categories(self, db: Session, current_user: User):
-        return db.query(Category).filter(Category.is_deleted == False, Category.created_by == current_user.id).all()
+    def get_all_categories(self, db: Session, current_user: User, page: int = 1, limit: int = 10):
+        query = db.query(Category).filter(Category.is_deleted == False, Category.created_by == current_user.id)
+        total = query.count()
+
+        items = (query.offset((page - 1) * limit).limit(limit).all())
+        total_pages = math.ceil(total / limit) if total else 1
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages
+        }
 
 
     def create_category(self, db: Session, category_create: CategoryCreate, current_user: User) -> Category:
