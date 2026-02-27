@@ -34,7 +34,7 @@ def seed_transactions(user_id: int, years: int = 2):
         print("User not found")
         return
 
-    categories = db.query(Category).filter(Category.created_by == user_id).all()
+    categories = db.query(Category).all()
     if not categories:
         print("No categories found")
         return
@@ -96,7 +96,7 @@ def seed_transactions(user_id: int, years: int = 2):
     # -------------------------
     # 3️⃣ Random Expenses
     # -------------------------
-    for _ in range(2500):
+    for _ in range(12500):
         category = random.choice(expense_categories)
 
         transactions.append(
@@ -121,4 +121,4 @@ def seed_transactions(user_id: int, years: int = 2):
 
 
 if __name__ == "__main__":
-    seed_transactions(user_id=1, years=2)
+    seed_transactions(user_id=5, years=5)

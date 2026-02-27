@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session 
-from typing import List
+from typing import List, Optional
 from app.api.deps import get_db, get_current_user
 from app.utils.pagination import PaginatedResponse
 from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse
 from app.services.transaction_service import TransactionService
+from datetime import datetime
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -18,9 +19,35 @@ def create_transaction(transaction: TransactionCreate, db: Session = Depends(get
 
 
 @router.get("/", response_model=PaginatedResponse[TransactionResponse])
-def get_transactions(db: Session = Depends(get_db), current_user = Depends(get_current_user), page: int = 1, limit: int = 10):
+def get_transactions(
+        db: Session = Depends(get_db),
+        current_user = Depends(get_current_user),
+        page: int = 1,
+        limit: int = 10,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        min_amount: Optional[float] = None,
+        max_amount: Optional[float] = None,
+        category_id: Optional[int] = None,
+        search: Optional[str] = None,
+        sort_by: str = "date",
+        sort_order: str = "desc",
+    ):
     try:
-        transactions = TransactionService().get_all_transactions(db, current_user, page, limit)
+        transactions = TransactionService().get_all_transactions(
+            db,
+            current_user,
+            page,
+            limit,
+            start_date=start_date,
+            end_date=end_date,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            category_id=category_id,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
         return transactions
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

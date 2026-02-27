@@ -12,9 +12,9 @@ class Transaction(Base, AuditMixin):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey("categories.id"), nullable=False)
 
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    amount: Mapped[float] = mapped_column(Float, nullable=False, index=True)
     description: Mapped[str] = mapped_column(String(255), nullable=True)
-    transaction_date: Mapped[datetime] = mapped_column(nullable=False)
+    transaction_date: Mapped[datetime] = mapped_column(nullable=False, index=True)
 
     user: Mapped[User] = relationship(
         "User",
