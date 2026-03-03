@@ -5,9 +5,9 @@ from app.core.security import verify_password, hash_password, create_access_toke
 class AuthService:
 
     def register_user(self, db: Session, user_data):
-        user_exists = db.query(User).filter(User.email == user_data.email).first()    
+        user_exists = db.query(User).filter(User.email == user_data.email).first()
         if user_exists:
-            raise ValueError("User alredy exists with this email")
+            raise ValueError("User already exists with this email")
 
         hashed_password = hash_password(user_data.hashed_password)
 
@@ -27,17 +27,21 @@ class AuthService:
 
     def authenticate_user(self, db: Session, email: str, password: str):
         user = db.query(User).filter(User.email == email).first()
+
         if not user:
             return None
+
         if not verify_password(password, user.hashed_password):
             return None
 
         return user
 
 
-    def login_user(db: Session, email: str, password: str):
+    def login_user(self, db: Session, email: str, password: str):
         user = self.authenticate_user(db, email, password)
+
         if not user:
             return None
-        access_token = create_access_token(data={"sub": str(user.id)})
-        return {"access_token": access_token, "token_type": "bearer"}
+
+        token_data = create_access_token(data={"sub": str(user.id)})
+        return {"access_token": token_data["access_token"], "token_type": token_data["token_type"]}

@@ -13,6 +13,7 @@ class TransactionFeatureBuilder:
 
         # Basic features
         df["amount"] = df["amount"].astype(float)
+        df["category_id"] = df["category_id"].astype(int)
 
         df["transaction_hour"] = pd.to_datetime(df["transaction_date"]).dt.hour
         df["transaction_day"] = pd.to_datetime(df["transaction_date"]).dt.day
@@ -26,6 +27,7 @@ class TransactionFeatureBuilder:
 
         feature_columns = [
             "amount",
+            "category_id",
             "transaction_hour",
             "transaction_day",
             "transaction_month",

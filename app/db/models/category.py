@@ -5,8 +5,8 @@ import enum
 
 
 class TransactionType(str, enum.Enum):
-    INCOME = "income"
-    EXPENSE = "expense"
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
 
 
 class Category(Base, AuditMixin):
