@@ -26,7 +26,7 @@ def get_month_starts(start_date, end_date):
     return months
 
 
-def seed_transactions(user_id: int, years: int = 2):
+def seed_transactions(user_id: int, years: int = 2) -> int:
     db: Session = next(get_db())
 
     user = db.query(User).filter(User.id == user_id).first()
@@ -41,7 +41,14 @@ def seed_transactions(user_id: int, years: int = 2):
 
     # Try to find specific categories by name (optional)
     salary_category = next((c for c in categories if "salary" in c.name.lower()), None)
-    expense_categories = [c for c in categories if "salary" not in c.name.lower()]
+    rent_category = next((c for c in categories if "pay-rent" in c.name.lower()), None)
+    car_emi_category = next((c for c in categories if "car-emi" in c.name.lower()), None)
+    exclude_keywords = ["salary", "pay-rent", "car-emi"]
+
+    expense_categories = [
+        c for c in categories
+        if not any(keyword in c.name.lower() for keyword in exclude_keywords)
+    ]
 
     end_date = datetime.now()
     start_date = end_date - timedelta(days=365 * years)
@@ -49,7 +56,7 @@ def seed_transactions(user_id: int, years: int = 2):
     transactions = []
 
     # -------------------------
-    # 1️⃣ Monthly Salary (Fixed Income)
+    # Monthly Salary (Fixed Income)
     # -------------------------
     if salary_category:
         month_starts = get_month_starts(start_date, end_date)
@@ -71,8 +78,72 @@ def seed_transactions(user_id: int, years: int = 2):
                 )
             )
 
+
     # -------------------------
-    # 2️⃣ Yearly Bonus (One-time income per year)
+    # Monthly Rent (Recurring)
+    # -----------------------
+    if rent_category:
+        month_starts = get_month_starts(start_date, end_date)
+        description = f"Expense - {rent_category.name}"
+
+        for month in month_starts:
+            rent_date = month.replace(day=5)
+            amount = 12000
+
+            # Inject one anomaly very hight rent
+            pay_rent_anomaly_injected = False
+            if month.year == start_date.year + 1 and month.month == 6 and not pay_rent_anomaly_injected:
+                amount = 60000  # anomaly
+                pay_rent_anomaly_injected = True
+
+            transactions.append(
+                Transaction(
+                    amount=amount,
+                    transaction_date=rent_date,
+                    description=description,
+                    category_id=rent_category.id,
+                    created_by=user_id,
+                    updated_by=user_id,
+                    user_id=user_id,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+            )
+
+
+    # -------------------------
+    # Car EMI (Recurring)
+    # -----------------------
+    if car_emi_category:
+        month_starts = get_month_starts(start_date, end_date)
+        description = f"Expense - {car_emi_category.name}"
+        car_emi_anomaly_injected = False
+        for month in month_starts:
+            car_emi_date = month.replace(day=5)
+            amount = 8500
+
+            # Inject one anomaly very hight rent
+            if month.year == start_date.year + 2 and month.month == 5 and not car_emi_anomaly_injected:
+                amount = 45000  # anomaly
+                car_emi_anomaly_injected = True
+
+            transactions.append(
+                Transaction(
+                    amount=amount,
+                    transaction_date=car_emi_date,
+                    description=description,
+                    category_id=car_emi_category.id,
+                    created_by=user_id,
+                    updated_by=user_id,
+                    user_id=user_id,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+            )
+
+
+    # -------------------------
+    # Yearly Bonus (One-time income per year)
     # -------------------------
     for year in range(start_date.year, end_date.year + 1):
         bonus_date = datetime(year, random.randint(1, 12), random.randint(1, 28))
@@ -94,9 +165,9 @@ def seed_transactions(user_id: int, years: int = 2):
                 )
 
     # -------------------------
-    # 3️⃣ Random Expenses
+    # Random Expenses
     # -------------------------
-    for _ in range(12500):
+    for _ in range(15000):
         category = random.choice(expense_categories)
 
         transactions.append(
@@ -117,8 +188,12 @@ def seed_transactions(user_id: int, years: int = 2):
     db.commit()
     db.close()
 
-    print(f"Inserted {len(transactions)} realistic transactions.")
+    return int(len(transactions))
 
 
 if __name__ == "__main__":
-    seed_transactions(user_id=5, years=5)
+    transaction_count = 0
+    for user_id in range(1, 6):  # Assuming you have 5 users
+        transaction_count += seed_transactions(user_id=user_id, years=5)
+
+    print(f"Total transactions inserted: {transaction_count}")

@@ -11,10 +11,10 @@ class ModelRegistry:
     
 
     @staticmethod
-    def save_model(user_id: int, model, scaler=None):
+    def save_model(user_id: int, model, scaler=None, feature_stats=None, recurring_ids=None):
         os.makedirs(MODEL_DIR, exist_ok=True)
         path = ModelRegistry.get_model_path(user_id)
-        joblib.dump({"model": model, "scaler": scaler}, path)
+        joblib.dump({"model": model, "scaler": scaler, "feature_stats": feature_stats, "recurring_ids": recurring_ids}, path)
 
 
     @staticmethod

@@ -21,11 +21,11 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 def login(user_data: UserLogin, db: Session = Depends(get_db)):
     try:
-        access_token = AuthService().login_user(db, user_data.email, user_data.hashed_password)
+        token_data = AuthService().login_user(db, user_data.email, user_data.hashed_password)
 
-        if not access_token:
+        if not token_data:
             raise HTTPException(status_code=401, detail="Invalid email or password")
 
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {"access_token": token_data["access_token"], "token_type": token_data["token_type"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

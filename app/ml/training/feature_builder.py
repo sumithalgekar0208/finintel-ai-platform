@@ -13,8 +13,6 @@ class TransactionFeatureBuilder:
 
         # Basic features
         df["amount"] = df["amount"].astype(float)
-        df["category_id"] = df["category_id"].astype(int)
-
         df["transaction_hour"] = pd.to_datetime(df["transaction_date"]).dt.hour
         df["transaction_day"] = pd.to_datetime(df["transaction_date"]).dt.day
         df["transaction_month"] = pd.to_datetime(df["transaction_date"]).dt.month
@@ -22,17 +20,27 @@ class TransactionFeatureBuilder:
 
         # Spending behavior features
         df["is_weekend"] = df["transaction_weekday"].apply(lambda x: 1 if x >= 5 else 0)
-        # You can expand this later:
-        # rolling averages, category encoding, etc.
+        
+        # -----------------------------------
+        # Category Frequency Encoding
+        # -----------------------------------
+        category_count = df["category_id"].value_counts()
+        total = len(df)
 
+        category_freq_map = (category_count / total).to_dict()
+        df["category_freq"] = df["category_id"].map(category_freq_map)
+
+        # -----------------------------------
+        # Final feature set
+        # -----------------------------------
         feature_columns = [
             "amount",
-            "category_id",
             "transaction_hour",
             "transaction_day",
             "transaction_month",
             "transaction_weekday",
-            "is_weekend"
+            "is_weekend",
+            "category_freq"
         ]
 
 

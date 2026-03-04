@@ -7,6 +7,7 @@ from app.ml.pipelines.anomaly_inference import AnomalyInferencePipeline
 from app.ml.training.feature_builder import TransactionFeatureBuilder
 from app.ml.training.model_trainer import AnomalyModelTrainer
 from app.ml.registry.model_registry import ModelRegistry
+from app.ml.postprocessing.recurring_detector import RecurringDetector
 
 
 class AnomalyTrainingPipeline:
@@ -27,22 +28,34 @@ class AnomalyTrainingPipeline:
 
         if not transactions:
             raise ValueError("No transactions found for training.")
+
+        # Detect recurring transactions to avoid false positives
+        tx_data = [{
+            "transaction_id": tx.id,
+            "amount": float(tx.amount),
+            "transaction_date": tx.transaction_date,
+            "category_id": tx.category_id
+        } for tx in transactions]
+        recurring_ids = RecurringDetector().detect_recurring_transactions(tx_data)
+
+        # Filter out recurring transactions for training
+        filtered_transactions = [tx for tx in transactions if tx.id not in recurring_ids]
         
         # Convert to dataframe
         df = pd.DataFrame([{
             "amount": t.amount,
             "transaction_date": t.transaction_date,
             "category_id": t.category_id
-        } for t in transactions])
+        } for t in filtered_transactions])
 
         # Build features
         X = TransactionFeatureBuilder.build_features(df)
 
         # Train model
-        model, scaler = AnomalyModelTrainer.train(X)
+        model, scaler, feature_stats = AnomalyModelTrainer.train(X)
 
         # Save model
-        ModelRegistry.save_model(user_id, model, scaler)
+        ModelRegistry.save_model(user_id, model, scaler, feature_stats, recurring_ids)
 
         # Clear inference cache
         AnomalyInferencePipeline._get_cached_model.cache_clear()

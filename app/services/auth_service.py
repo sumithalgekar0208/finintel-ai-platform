@@ -44,4 +44,4 @@ class AuthService:
             return None
 
         token_data = create_access_token(data={"sub": str(user.id)})
-        return {"access_token": token_data["access_token"], "token_type": token_data["token_type"]}
+        return {"access_token": token_data, "token_type": "bearer"}
