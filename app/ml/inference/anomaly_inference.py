@@ -112,6 +112,7 @@ class AnomalyInference:
         # --------------------------------
         # Process results
         # --------------------------------
+        amount_ratio = None
         for idx, (tx, pred, score) in enumerate(zip(transactions, predictions, scores)):
             score = float(score)
             anomaly_score = round(-score, 4)
@@ -127,6 +128,7 @@ class AnomalyInference:
             # Recurring transactions should not be anomalies
             # ---------------------------------
             if profile:
+                amount_ratio = tx.amount / profile["avg_amount"] if profile["avg_amount"] else None
                 is_recurring = True
                 expected_amount = profile["avg_amount"]
 
@@ -158,7 +160,7 @@ class AnomalyInference:
                     feature_stats
                 )
 
-                severity = classifier.get_severity(score)
+                severity = classifier.get_severity(score, )
                 confidence = classifier.get_confidence(score)
                 reason = reason_builder.build(explanation)
 

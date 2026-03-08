@@ -1,10 +1,17 @@
 class AnomalyClassifier:
 
-    def get_severity(self, score: float) -> str:
+
+    def get_severity(self, score: float, amount_ratio: float | None = None) -> str:
         """
         Classify anomaly severity based on score.
         More negative = more anomalous.
         """
+
+        # ----------------------------------
+        # High severity if amount is very abnormal
+        # -----------------------------------
+        if amount_ratio and amount_ratio >= 2:
+            return "HIGH" 
 
         if score < -0.08:
             return "HIGH"
