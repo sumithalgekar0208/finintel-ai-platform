@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models.transaction import Transaction
 from app.db.models.category  import Category, TransactionType
-from app.ml.pipelines.anomaly_inference import AnomalyInferencePipeline
+from app.ml.inference.anomaly_inference import AnomalyInference
 from app.ml.training.feature_builder import TransactionFeatureBuilder
 from app.ml.training.model_trainer import AnomalyModelTrainer
 from app.ml.registry.model_registry import ModelRegistry
@@ -14,7 +14,9 @@ class AnomalyTrainingPipeline:
 
     @staticmethod
     def run(db: Session, user_id: int):
+        # -----------------------------
         # Fetch user transactions
+        # -----------------------------
         transactions = (
             db.query(Transaction)
             .join(Category, Transaction.category_id == Category.id)
@@ -29,35 +31,46 @@ class AnomalyTrainingPipeline:
         if not transactions:
             raise ValueError("No transactions found for training.")
 
-        # Detect recurring transactions to avoid false positives
+        # -----------------------------
+        # Detect recurring transactions
+        # -----------------------------
         tx_data = [{
             "transaction_id": tx.id,
             "amount": float(tx.amount),
             "transaction_date": tx.transaction_date,
             "category_id": tx.category_id
         } for tx in transactions]
-        recurring_ids = RecurringDetector().detect_recurring_transactions(tx_data)
-
-        # Filter out recurring transactions for training
-        filtered_transactions = [tx for tx in transactions if tx.id not in recurring_ids]
         
+        recurring_detector = RecurringDetector()
+        recurring_profiles = recurring_detector.detect_recurring_transactions(tx_data)
+        
+        # ------------------------------
         # Convert to dataframe
-        df = pd.DataFrame([{
-            "amount": t.amount,
-            "transaction_date": t.transaction_date,
-            "category_id": t.category_id
-        } for t in filtered_transactions])
+        # ------------------------------
+        df = pd.DataFrame(tx_data)
 
+        # ------------------------------
         # Build features
+        # ------------------------------
         X = TransactionFeatureBuilder.build_features(df)
 
+        # ------------------------------
         # Train model
-        model, scaler, feature_stats = AnomalyModelTrainer.train(X)
+        # ------------------------------
+        model_artifact = AnomalyModelTrainer.train(X)
 
+        # ------------------------------
+        # Add recurring profiles to model artifact
+        # ------------------------------
+        model_artifact["recurring_profiles"] = recurring_profiles
+
+        # ------------------------------
         # Save model
-        ModelRegistry.save_model(user_id, model, scaler, feature_stats, recurring_ids)
+        # ------------------------------
+        ModelRegistry.save_model(user_id, model_artifact)
 
-        # Clear inference cache
-        AnomalyInferencePipeline._get_cached_model.cache_clear()
-
-        return {"message": "Model trained successfully", "records_used": len(df)}
+        return {
+                "message": "Model trained successfully",
+                "records_used": len(df),
+                "recurring patterns": recurring_profiles,
+            }

@@ -1,52 +1,120 @@
 from collections import defaultdict
-from datetime import timedelta
+from statistics import median
+from datetime import datetime
 
 
 class RecurringDetector:
 
-    AMOUNT_TOLERANCE_PERCENTAGE = 10 
+    AMOUNT_TOLERANCE_PERCENTAGE = 10
+    DAY_TOLERANCE = 3
     MIN_OCCURRENCES = 3
 
 
     def detect_recurring_transactions(self, transactions):
         """
-        Detect recurring transactions.
-        transactions: list of dicts (must include amount, category_id, transaction_date)
-        Returns set of transaction_ids that are recurring.
+        Detect recurring monthly patterns.
+
+        Returns:
+        [
+            {
+                "category_id": int,
+                "avg_amount": float,
+                "day_of_month": int,
+                "amount_tolerance": float
+            }
+        ]
         """
 
-        recurring_groups = defaultdict(list)
+        grouped = defaultdict(list)
 
-        # Group by category
+        # ------------------------------
+        # Group transactions by category
+        # ------------------------------
         for tx in transactions:
-            recurring_groups[tx["category_id"]].append(tx)
+            if not isinstance(tx, dict):
+                raise ValueError("Transactions must be dictionaries")
+            grouped[tx["category_id"]].append(tx)
 
-        recurring_ids = set()
+        recurring_profiles = []
 
-        for category, tx_list in recurring_groups.items():
-            # Sort by date
+        for category_id, tx_list in grouped.items():
+            if len(tx_list) < self.MIN_OCCURRENCES:
+                continue
+
+            # ------------------------------
+            # Sort transactions by date
+            # ------------------------------
             tx_list.sort(key=lambda x: x["transaction_date"])
 
-            for i in range(len(tx_list)):
-                base = tx_list[i]
-                similar_count = 1
-                for j in range(i + 1, len(tx_list)):
-                    compare = tx_list[j]
+            amounts = [float(tx["amount"]) for tx in tx_list]
 
-                    # Check amount similarity
-                    lower = base["amount"] * (1 - self.AMOUNT_TOLERANCE_PERCENTAGE / 100)
-                    upper = base["amount"] * (1 + self.AMOUNT_TOLERANCE_PERCENTAGE / 100)
+            days = [
+                tx["transaction_date"].day
+                if isinstance(tx["transaction_date"], datetime)
+                else datetime.fromisoformat(tx["transaction_date"]).day
+                for tx in tx_list
+            ]
 
-                    if not (lower <= compare["amount"] <= upper):
-                        continue
+            avg_amount = median(amounts)
 
-                    # Check roughly monthly gap (25–35 days)
-                    delta_days = (compare["transaction_date"] - base["transaction_date"]).days
+            # ------------------------------
+            # Group days with tolerance
+            # ------------------------------
+            day_groups = defaultdict(int)
+            for day in days:
+                bucket = day // self.DAY_TOLERANCE
+                day_groups[bucket] += 1
 
-                    if 25 <= delta_days <= 35:
-                        similar_count += 1
+            most_common_bucket = max(day_groups,key=day_groups.get)
 
-                if similar_count >= self.MIN_OCCURRENCES:
-                    recurring_ids.add(base["transaction_id"])
+            if day_groups[most_common_bucket] >= self.MIN_OCCURRENCES:
+                recurring_profiles.append({
+                    "category_id": category_id,
+                    "avg_amount": round(avg_amount, 2),
+                    "day_bucket": most_common_bucket,
+                    "amount_tolerance": self.AMOUNT_TOLERANCE_PERCENTAGE
+                })
 
-        return recurring_ids
+        return recurring_profiles
+    
+
+    def get_recurring_profiles(self, tx, recurring_profiles):
+        """
+        Get recurring profiles that match the transaction's category.
+        """
+        tx_day = (
+            tx["transaction_date"].day
+            if isinstance(tx["transaction_date"], datetime)
+            else datetime.fromisoformat(tx["transaction_date"]).day
+        )
+
+        bucket = tx_day // self.DAY_TOLERANCE
+
+        for profile in recurring_profiles:
+            if tx["category_id"] != profile["category_id"]:
+                continue
+
+            if bucket != profile["day_bucket"]:
+                continue
+
+            return profile
+        
+        return None
+    
+
+    def is_recurring_transaction(self, tx, recurring_profiles):
+        """
+        Returns True if transaction matches recurring pattern.
+        """
+        profile = self.get_recurring_profiles(tx, recurring_profiles)
+
+        if not profile:
+            return False
+
+        lower = profile["avg_amount"] * (1 - profile["amount_tolerance"] / 100)
+        upper = profile["avg_amount"] * (1 + profile["amount_tolerance"] / 100)
+
+        if not (lower <= tx["amount"] <= upper):
+            return False
+
+        return True
