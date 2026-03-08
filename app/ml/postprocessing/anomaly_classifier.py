@@ -21,12 +21,32 @@ class AnomalyClassifier:
             return "LOW"
 
 
-    def get_confidence(self, score: float) -> float:
+    def get_confidence(self, score: float, amount_ratio: float | None = None) -> float:
         """
         Convert anomaly score into a confidence metric (0 to 1).
         """
 
-        # Normalize roughly assuming score range [-0.15, 0.15]
-        normalized = min(max((-score) / 0.15, 0), 1)
+        # --------------------------------
+        # Model confidence based on score
+        # --------------------------------
+        model_conf = min(max((-score) / 0.15, 0), 1)
 
-        return round(normalized, 2)
+        # -------------------------------
+        # Amount ratio confidence
+        # -------------------------------
+        if amount_ratio:
+            ratio_conf = min(amount_ratio / 3, 1)
+        else:
+            ratio_conf = 0
+        
+        # --------------------------------
+        # Combine model confidence and amount ratio confidence
+        # --------------------------------
+        confidence = max(model_conf, ratio_conf)
+
+        # --------------------------------
+        # Avoid absolute certainty
+        # --------------------------------
+        confidence = min(confidence, 0.95)
+
+        return round(confidence, 2)

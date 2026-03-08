@@ -128,9 +128,9 @@ class AnomalyInference:
             # Recurring transactions should not be anomalies
             # ---------------------------------
             if profile:
-                amount_ratio = tx.amount / profile["avg_amount"] if profile["avg_amount"] else None
                 is_recurring = True
                 expected_amount = profile["avg_amount"]
+                amount_ratio = tx.amount / expected_amount if expected_amount else None
 
                 # --------------------------------
                 # Allow +- 30% deviation
@@ -144,6 +144,7 @@ class AnomalyInference:
                     is_anomaly = True
             else:
                 is_recurring = False
+                amount_ratio = None
                 is_anomaly = pred == -1
 
             explanation = []
@@ -160,8 +161,8 @@ class AnomalyInference:
                     feature_stats
                 )
 
-                severity = classifier.get_severity(score, )
-                confidence = classifier.get_confidence(score)
+                severity = classifier.get_severity(score, amount_ratio)
+                confidence = classifier.get_confidence(score, amount_ratio)
                 reason = reason_builder.build(explanation)
 
             # -------------------------------
